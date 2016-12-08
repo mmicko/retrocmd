@@ -170,6 +170,9 @@ void mainapp::init(int _argc, char** _argv)
 	get_full_path(m_path[1], ".");
 	updateFolder(m_filelist[0],m_path[0]);
 	updateFolder(m_filelist[1],m_path[1]);
+	
+	entry::WindowHandle defaultWindow = { 0 };
+	setWindowTitle(defaultWindow, "Retro Commander");
 }
 
 int mainapp::shutdown()
