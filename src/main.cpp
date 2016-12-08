@@ -13,6 +13,8 @@
 constexpr char PATHSEPCH = '\\';
 #else
 constexpr char PATHSEPCH = '/';
+#include <cstdlib>
+#include <cerrno>
 #include <memory>
 #include <unistd.h>
 #endif
