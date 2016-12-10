@@ -1,5 +1,4 @@
 #include <vector>
-#include <string>
 #include <chrono>
 #include <algorithm>
 #include <bx/uint32_t.h>
@@ -8,6 +7,13 @@
 #include "entry/cmd.h"
 #include "entry/input.h"
 #include <dirent.h> 
+#include "imgui/imgui.h"
+#include "nanovg/nanovg.h"
+#include "images/image.h"
+
+#include <array>
+#include <memory>
+
 
 #if defined(WIN32)
 constexpr char PATHSEPCH = '\\';
@@ -93,7 +99,7 @@ struct fileData
 class mainapp : public entry::AppI
 {
 public:
-	mainapp(): m_panel(0), m_width(0), m_height(0), m_debug(0), m_reset(0), m_text_width(0), m_text_height(0)
+	mainapp(): m_panel(0), m_width(0), m_height(0), m_debug(0), m_reset(0), m_text_width(0), m_text_height(0), m_nvg(nullptr), m_image_handle(0), m_image_width(0), m_image_height(0), m_screen(0)
 	{
 	}
 
@@ -131,9 +137,17 @@ private:
 	bool m_keyState[entry::Key::Count];
 	timepoint_type m_keyTimePress[entry::Key::Count];
 	clock_type m_clock;
+	NVGcontext* m_nvg;
+
+	int m_image_handle;
+	uint32_t m_image_width;
+	uint32_t m_image_height;
+
+	int m_screen;
 };
 
 ENTRY_IMPLEMENT_MAIN(mainapp);
+
 
 void mainapp::init(int _argc, char** _argv)
 {
@@ -175,10 +189,36 @@ void mainapp::init(int _argc, char** _argv)
 	
 	entry::WindowHandle defaultWindow = { 0 };
 	setWindowTitle(defaultWindow, "Retro Commander");
+
+	imguiCreate();
+	m_nvg = nvgCreate(1, 0);
+
+	if (_argc == 2) {
+		m_screen = 1;
+		file_definition fd(_argv[1]);
+		if (fd.is_open()) {
+			for (auto &format : get_image_formats())
+			{
+				if (format->detect(fd) == 100)
+				{
+					format->load(fd);
+					m_image_width = format->width();
+					m_image_height = format->height();
+					m_image_handle = nvgCreateImageRGBA(m_nvg, m_image_width, m_image_height, 0, format->data());
+					break;
+				}
+			}
+		}
+	}
+	bgfx::setViewSeq(0, true);
 }
 
 int mainapp::shutdown()
 {
+	if (m_image_handle) nvgDeleteImage(m_nvg, m_image_handle);
+	imguiDestroy();
+
+	nvgDelete(m_nvg);
 	// Shutdown bgfx.
 	bgfx::shutdown();
 	return 0;
@@ -338,11 +378,26 @@ bool mainapp::update()
 	{
 		bgfx::setViewRect(0, 0, 0, uint16_t(m_width), uint16_t(m_height) );
 		bgfx::touch(0);
-		clearBuffer();
-		displayPanel(0, 0 , m_text_width /2, m_text_height -2);
-		displayPanel(1, m_text_width / 2, m_text_width /2, m_text_height -2);
-		bgfx::dbgTextImage(0, 0, m_text_width, m_text_height, m_buffer.data(), m_text_width*2);
+		switch(m_screen)
+		{
+		default:
+		case 0:
+			clearBuffer();
+			displayPanel(0, 0, m_text_width / 2, m_text_height - 2);
+			displayPanel(1, m_text_width / 2, m_text_width / 2, m_text_height - 2);
+			bgfx::dbgTextImage(0, 0, m_text_width, m_text_height, m_buffer.data(), m_text_width * 2);
+			break;
+		case 1:
+			nvgBeginFrame(m_nvg, m_width, m_height, 1.0f);
 
+			struct NVGpaint  imgPaint = nvgImagePattern(m_nvg, 0, 0, float(m_image_width), float(m_image_height), 0.0f / 180.0f*NVG_PI, m_image_handle, 1.0f);
+			nvgBeginPath(m_nvg);
+			nvgRect(m_nvg, 0, 0, float(m_image_width), float(m_image_height));
+			nvgFillPaint(m_nvg, imgPaint);
+			nvgFill(m_nvg);
+			nvgEndFrame(m_nvg);
+			break;
+		}								
 		bgfx::frame();
 		return true;
 	}

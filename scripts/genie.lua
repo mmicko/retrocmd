@@ -73,10 +73,19 @@ includedirs {
 	path.join(BGFX_DIR, "3rdparty"),
 	path.join(BGFX_DIR, "examples/common"),
 	path.join(SRC_DIR,  ""),
+	path.join(SRC_DIR,  "formats"),
 }
 
 files {
 	path.join(SRC_DIR, "main.cpp"),
+	path.join(SRC_DIR, "formats/file.cpp"),
+	path.join(SRC_DIR, "formats/file.h"),
+	path.join(SRC_DIR, "formats/format.h"),
+	path.join(SRC_DIR, "formats/images/image.cpp"),
+	path.join(SRC_DIR, "formats/images/image.h"),
+	path.join(SRC_DIR, "formats/images/atarist/big.h"),
+	path.join(SRC_DIR, "formats/images/atarist/pic.h"),
+
 }
 if _ACTION == "gmake" then
 	removebuildoptions_cpp {

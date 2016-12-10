@@ -20,3 +20,8 @@ or to generate Visual Studio 2015 project :
 ```
 vs2015.cmd
 ```
+
+To update all submodules (for commiters only):
+```
+git submodule foreach git pull origin master
+```
