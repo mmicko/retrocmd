@@ -108,12 +108,12 @@ public:
 	bool update() override;	
 
 	void updateFolder(std::vector<fileData> &filelist, std::string path);
-	void clearBuffer();
+	void clearBuffer(uint8_t attr);
 	void bufferPrintf(uint16_t x, uint16_t y, uint8_t attrib, char const *format, ...) ATTR_PRINTF(5, 6);
 	void bufferAttrib(uint16_t x, uint16_t y, uint8_t attrib, uint16_t w);
 	void checkKeyPress();
 	void keypressed(entry::Key::Enum key);
-	void displayPanel(int num, uint16_t posx, uint16_t width, uint16_t height);
+	void displayPanel(int num, uint16_t posx, uint16_t width, uint16_t height, uint8_t panel_attr);
 private:
 	std::vector<fileData> m_filelist[2];
 	std::string m_path[2];
@@ -278,7 +278,7 @@ void mainapp::updateFolder(std::vector<fileData> &filelist, std::string path)
     });	
 }
 
-void mainapp::clearBuffer()
+void mainapp::clearBuffer(uint8_t attr)
 {
 	const bgfx::Stats* stats = bgfx::getStats();
 	if (m_text_width != stats->textWidth || m_text_height != stats->textHeight)
@@ -288,6 +288,7 @@ void mainapp::clearBuffer()
 		m_buffer.resize(m_text_width*m_text_height * 2);		
 	}
 	std::fill(m_buffer.begin(), m_buffer.end(), 0x00);
+	for (int i = 1; i < m_text_width*m_text_height * 2; i += 2) m_buffer[i] = attr;
 }
 
 void mainapp::keypressed(entry::Key::Enum key)
@@ -350,10 +351,22 @@ void mainapp::checkKeyPress()
 	}
 }
 
-void mainapp::displayPanel(int num, uint16_t posx, uint16_t width, uint16_t height)
+void mainapp::displayPanel(int num, uint16_t posx, uint16_t width, uint16_t height, uint8_t panel_attr)
 {
 	int posy = 1;
-	bufferPrintf(posx, 0, 0x0f, "%s", m_path[num].c_str());
+	bufferPrintf(posx, 0, panel_attr, "%c", 0xc9);
+	bufferPrintf(posx, height - 1, panel_attr, "%c", 0xc8);
+	for (int x = posx+1; x < posx+width - 1; x++) {
+		bufferPrintf(x, 0, panel_attr, "%c", 0xcd);
+		bufferPrintf(x, height-1, panel_attr, "%c", 0xcd);
+	}
+	bufferPrintf(posx+width-1, 0, panel_attr, "%c", 0xbb);
+	bufferPrintf(posx + width - 1, height - 1, panel_attr, "%c", 0xbc);
+	for (int y = 1; y < height - 1; y++) {
+		bufferPrintf(posx, y, panel_attr, "%c", 0xba);
+		bufferPrintf(posx+width-1, y, panel_attr, "%c", 0xba);
+	}
+	bufferPrintf(posx+2, 0, panel_attr, "%s", m_path[num].c_str());
 	int startndx = 0;
 	int endndx = std::min(uint16_t(m_filelist[num].size()),height);
 	if (m_selected[num] > height) {
@@ -363,12 +376,12 @@ void mainapp::displayPanel(int num, uint16_t posx, uint16_t width, uint16_t heig
 	for (int i=startndx;i<endndx;i++)
 	{
 		auto entry = m_filelist[num][i];
-		bufferPrintf(posx, posy, 0x0f, "%s", entry.name.c_str());
+		bufferPrintf(posx+1, posy, panel_attr, "%s", entry.name.c_str());
 		if (entry.isDirectory)
-			bufferPrintf(posx+ width - 7, posy, 0x03, "<dir>");
+			bufferPrintf(posx+1+ width - 7-1, posy, panel_attr, "<dir>");
 		posy++;
 	}
-	if (m_panel == num) bufferAttrib(posx, m_selected[num] + 1, 0x40, width);
+	if (m_panel == num) bufferAttrib(posx+1, m_selected[num] + 1, 0xf4, width-2);
 }
 
 bool mainapp::update()
@@ -382,9 +395,9 @@ bool mainapp::update()
 		{
 		default:
 		case 0:
-			clearBuffer();
-			displayPanel(0, 0, m_text_width / 2, m_text_height - 2);
-			displayPanel(1, m_text_width / 2, m_text_width / 2, m_text_height - 2);
+			clearBuffer(0x4f);
+			displayPanel(0, 0, m_text_width / 2, m_text_height,0x4f);
+			displayPanel(1, m_text_width / 2, m_text_width / 2, m_text_height, 0x4f);
 			bgfx::dbgTextImage(0, 0, m_text_width, m_text_height, m_buffer.data(), m_text_width * 2);
 			break;
 		case 1:
