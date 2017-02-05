@@ -51,6 +51,7 @@ dofile (path.join(BGFX_DIR, "scripts", "example-common.lua"))
 
 group "libs"
 bgfxProject("", "StaticLib", {})
+dofile(path.join(BX_DIR, "scripts/bx.lua"))
 
 group "main"
 
@@ -100,6 +101,7 @@ end
 links {
 	"bgfx",
 	"example-common",
+	"bx",
 }
 configuration { "mingw*" }
 	targetextension ".exe"
